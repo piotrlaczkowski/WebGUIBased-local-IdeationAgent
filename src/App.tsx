@@ -161,54 +161,28 @@ const MainApp: React.FC<MainAppProps> = ({
       return "";
     }
 
-    // Comprehensive journalist-style interview summary prompt
-    const summaryPrompt = `You are a lead journalist creating a comprehensive interview summary. Your mission is to document EVERYTHING learned during this interview and identify what still needs investigation.
+    // Create a focused, concise summary prompt
+    const summaryPrompt = `Create a brief, focused summary of this conversation about the user's idea.
 
-COMPLETE INTERVIEW TRANSCRIPT:
-${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '🎙️ Journalist'}: ${msg.content}`).join('\n\n')}
+CONVERSATION:
+${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`).join('\n\n')}
 
-📰 COMPREHENSIVE DOCUMENTATION INSTRUCTIONS:
-- Document ALL information the interviewee has provided (no matter how small)
-- Extract EVERY detail, fact, preference, constraint, or goal mentioned
-- Include specific quotes, numbers, timelines, or requirements stated
-- Identify ALL information gaps that need investigation
-- Create comprehensive follow-up questions for complete story
+Write a concise summary in this format:
 
-📋 COMPLETE INTERVIEW SUMMARY STRUCTURE:
+# 💡 Idea Summary
 
-# 💡 Complete Idea Development Interview Summary
+## What We Know
+[2-3 sentences about the main idea]
 
-## 🎯 What We Know: Core Concept & Vision
-[Document EVERYTHING the user said about their main idea - be comprehensive]
+## Key Details
+- **Problem**: [What problem this solves, if mentioned]
+- **Target**: [Who would use this, if mentioned]
+- **Approach**: [How it would work, if mentioned]
 
-## 🎯 Problem & Solution Analysis
-[Include ALL details about problems mentioned and proposed solutions]
+## Still Need to Learn
+[2-3 specific questions to ask next]
 
-## 👥 Target Audience & Market Information
-[Document ALL details about users, market, audience mentioned]
-
-## ⚡ Features, Functionality & Implementation
-[Include ALL features, technical details, functionality described]
-
-## 🔧 Resources, Requirements & Constraints
-[Document ALL resources, budget, timeline, constraints mentioned]
-
-## 💬 Additional Details & Context
-[Include ANY other information provided - preferences, experiences, concerns, etc.]
-
-## 📊 Current Status & Progress Report
-[Always include - comprehensive view of development stage]
-
-## 🎙️ Critical Follow-Up Investigation Areas
-[Always include - comprehensive list of 6-10 investigative questions covering ALL missing information needed for complete story]
-
-🎯 COMPREHENSIVE DOCUMENTATION RULES:
-- Include EVERY piece of information provided, no matter how small
-- Use direct quotes extensively to preserve the interviewee's exact words
-- Organize information comprehensively - don't leave anything out
-- Identify ALL areas needing further investigation
-- Create investigative questions that cover every missing piece of the puzzle
-- Make this a complete record of everything learned so far`;
+Keep it short and focused on facts only.`;
 
     try {
       const summary = await generateResponse([
@@ -229,69 +203,23 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
     } catch (error) {
       console.error('Error generating summary:', error);
       
-            // Comprehensive journalist-style interview fallback summary
-      let fallbackSummary = "# 💡 Complete Idea Development Interview Summary\n\n";
+            // Simple fallback summary when LLM fails
+      let fallbackSummary = "# 💡 Idea Summary\n\n";
       
       if (userMessages.length > 0) {
-        const allUserInputs = userMessages.map(msg => 
-          msg.content.replace(/🤔|Thinking\.\.\./g, '').trim()
-        ).filter(content => content.length > 0);
+        const latestInput = userMessages[userMessages.length - 1]?.content || '';
         
-        // Document everything we learned
-        fallbackSummary += `## 🎯 What We Know: Core Concept & Vision\n`;
-        fallbackSummary += `**Complete interview record:**\n\n`;
-        allUserInputs.forEach((input, index) => {
-          fallbackSummary += `**Interview Exchange ${index + 1}:** "${input}"\n\n`;
-        });
+        fallbackSummary += `## What We Know\n`;
+        fallbackSummary += `You're working on: ${latestInput}\n\n`;
         
-        // Extract any additional context from assistant responses
-        const assistantMessages = conversationHistory.filter(msg => msg.role === "assistant");
-        if (assistantMessages.length > 0) {
-          fallbackSummary += `## 💬 Additional Details & Context\n`;
-          fallbackSummary += `**Topics explored during interview:**\n`;
-          assistantMessages.forEach((msg) => {
-            // Extract key topics from assistant questions
-            const content = msg.content.toLowerCase();
-            if (content.includes('who') || content.includes('target')) {
-              fallbackSummary += `- Target audience discussion initiated\n`;
-            }
-            if (content.includes('problem') || content.includes('solve')) {
-              fallbackSummary += `- Problem definition exploration started\n`;
-            }
-            if (content.includes('how') || content.includes('work')) {
-              fallbackSummary += `- Implementation approach investigated\n`;
-            }
-            if (content.includes('budget') || content.includes('resource')) {
-              fallbackSummary += `- Resource requirements discussed\n`;
-            }
-          });
-          fallbackSummary += '\n';
-        }
+        fallbackSummary += `## Progress\n`;
+        fallbackSummary += `${userMessages.length} message${userMessages.length > 1 ? 's' : ''} exchanged\n\n`;
         
-        // Comprehensive status report
-        fallbackSummary += `## 📊 Current Status & Progress Report\n`;
-        fallbackSummary += `- **Interview Stage:** Active idea development investigation\n`;
-        fallbackSummary += `- **Total Exchanges:** ${conversationHistory.length} conversation exchanges\n`;
-        fallbackSummary += `- **User Responses:** ${userMessages.length} detailed input${userMessages.length > 1 ? 's' : ''} from interviewee\n`;
-        fallbackSummary += `- **Information Density:** ${Math.min(userMessages.length * 15, 40)}% of complete idea profile documented\n`;
-        fallbackSummary += `- **Investigation Depth:** ${assistantMessages.length} follow-up question${assistantMessages.length > 1 ? 's' : ''} asked\n\n`;
-        
-        // Comprehensive follow-up investigation
-        fallbackSummary += `## 🎙️ Critical Follow-Up Investigation Areas\n`;
-        fallbackSummary += `**Complete investigative plan for next interview sessions:**\n\n`;
-        fallbackSummary += `1. **Problem Deep-Dive:** What specific problem does this solve? Who experiences this problem? How severe is it?\n`;
-        fallbackSummary += `2. **Target Audience Analysis:** Who exactly are your users? What are their demographics, behaviors, pain points?\n`;
-        fallbackSummary += `3. **Solution Mechanics:** How exactly does your solution work? What's the step-by-step process?\n`;
-        fallbackSummary += `4. **Value Proposition:** What makes this unique? Why is this better than existing solutions?\n`;
-        fallbackSummary += `5. **Implementation Strategy:** How will you build this? What resources do you need?\n`;
-        fallbackSummary += `6. **Market Context:** Who else is solving this? What's your competitive advantage?\n`;
-        fallbackSummary += `7. **Success Metrics:** How will you measure success? What are your specific goals?\n`;
-        fallbackSummary += `8. **Timeline & Resources:** When do you want this completed? What's your budget/timeline?\n\n`;
-        
-        fallbackSummary += `*🎙️ **Interview Status:** Comprehensive investigation in progress. Continue with detailed questioning to document complete idea profile.*\n\n`;
+        fallbackSummary += `## Next Steps\n`;
+        fallbackSummary += `Continue the conversation to develop your idea further.\n`;
       } else {
-        fallbackSummary += `## 🎙️ Ready to Begin Comprehensive Interview\n`;
-        fallbackSummary += `Share your idea to start the complete investigative interview process that will help you fully structure and define every aspect of your concept.\n\n`;
+        fallbackSummary += `## Ready to Start\n`;
+        fallbackSummary += `Share your idea to begin!\n`;
       }
       
       return fallbackSummary;
@@ -346,6 +274,12 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
   }, []);
 
   const updateIdeaSummary = useCallback(async (messages: Message[]) => {
+    // Prevent summary updates while generation is happening
+    if (isGenerating) {
+      console.log('Skipping summary update - generation in progress');
+      return;
+    }
+
     // Only update if we have meaningful content
     const userMessages = messages.filter(msg => msg.role === "user");
     if (userMessages.length === 0) return;
@@ -371,26 +305,13 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
       } catch (error) {
       console.error("Error updating summaries:", error);
         // Use fallback summary that doesn't require LLM
-        const fallbackSummary = `# 💡 Idea Development Interview Summary
+        const fallbackSummary = `# 💡 Idea Summary
 
-## 🎯 What We Know: Core Concept
-**Latest user input:** "${userMessages[userMessages.length - 1]?.content || 'No input yet'}"
+## What We Know
+You're working on: "${userMessages[userMessages.length - 1]?.content || 'No input yet'}"
 
-## 📊 Current Status Report
-- **Interview Stage:** Active idea development
-- **Total Information:** ${userMessages.length} response${userMessages.length !== 1 ? 's' : ''} from interviewee
-- **Conversation Length:** ${messages.length} total exchanges
-
-## 🎙️ Critical Follow-Up Questions
-**To continue developing this idea, we need to investigate:**
-
-1. **Problem Definition:** What specific problem does this solve?
-2. **Target Users:** Who exactly needs this solution?
-3. **Implementation:** How would this actually work?
-4. **Value Proposition:** What makes this unique or valuable?
-5. **Resources:** What do you need to make this happen?
-
-*🎙️ Continue the interview to build a comprehensive idea profile.*`;
+## Next Steps
+Keep chatting to develop your idea further!`;
         setIdeaSummary(fallbackSummary);
     } finally {
       setIsUpdatingSummary(false);
@@ -399,7 +320,7 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
     
     // Cleanup timeout on component unmount or new update
     return () => clearTimeout(timeoutId);
-  }, [extractIdeaSummary, createConversationSummary, MAX_CONTEXT_MESSAGES]);
+  }, [extractIdeaSummary, createConversationSummary, MAX_CONTEXT_MESSAGES, isGenerating]);
 
   const handleSendMessage = async (): Promise<void> => {
     if (!input.trim() || !isReady) return;
@@ -409,18 +330,15 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
     setMessages(currentMessages);
     setInput("");
     setIsGenerating(true);
-    
-    // Trigger summary update strategically to avoid tensor disposal issues
-    // Only update on first message or after significant conversation
-    if (messages.length === 0 || messages.length % 2 === 0) {
-      updateIdeaSummary(currentMessages);
-    }
 
     try {
       // Smart context management: Use summary for long conversations
       let messagesForGeneration: Array<{ role: string; content: string }>;
       
       if (currentMessages.length > MAX_CONTEXT_MESSAGES) {
+        // Clear past key values when switching to summary mode to prevent context mismatch
+        console.log('Clearing past key values due to context mode switch (summary mode)');
+        clearPastKeyValues();
         // Use conversation summary + idea summary + recent messages
         const recentMessages = currentMessages.slice(-RECENT_MESSAGES_COUNT);
         const contextSummary = conversationSummary || createConversationSummary(currentMessages.slice(0, -RECENT_MESSAGES_COUNT));
@@ -461,30 +379,62 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
         setMessages(updatedMessages);
 
         let accumulatedContent = "";
-        const response = await generateResponse(
-          messagesForGeneration,
-          [], // No tools
-          (token: string) => {
-            accumulatedContent += token;
-            setMessages((current) => {
-              const updated = [...current];
-              updated[updated.length - 1] = {
-                role: "assistant" as const,
-                content: accumulatedContent,
-              };
-              return updated;
-            });
-          },
-        );
+        try {
+          const response = await generateResponse(
+            messagesForGeneration,
+            [], // No tools
+            (token: string) => {
+              accumulatedContent += token;
+              setMessages((current) => {
+                const updated = [...current];
+                updated[updated.length - 1] = {
+                  role: "assistant" as const,
+                  content: accumulatedContent,
+                };
+                return updated;
+              });
+            },
+          );
 
-        // Update the final message with the complete response
-        const finalMessages: Message[] = [...currentMessages, { role: "assistant" as const, content: response }];
-        setMessages(finalMessages);
-      
-      // Update idea summary strategically with complete conversation history
-      // Only update after full conversation exchanges to prevent tensor disposal
-      const finalMessagesForSummary = [...currentMessages, { role: "assistant" as const, content: response }];
-      updateIdeaSummary(finalMessagesForSummary);
+          // Update the final message with the complete response
+          const finalMessages: Message[] = [...currentMessages, { role: "assistant" as const, content: response }];
+          setMessages(finalMessages);
+        
+          // Update idea summary AFTER complete conversation exchange to prevent interference
+          // Only update after significant conversation milestones
+          if (finalMessages.length === 2 || finalMessages.length % 4 === 0) {
+            console.log('Updating idea summary after complete conversation exchange');
+            updateIdeaSummary(finalMessages);
+          }
+        } catch (generationError) {
+          console.error('Error during message generation:', generationError);
+          
+          // If it's a past_conv error, clear past key values and show a helpful message
+          if (generationError instanceof Error && (generationError.message.includes('past_conv') || generationError.message.includes('invalid data location'))) {
+            console.warn('Clearing conversation context due to data location error');
+            clearPastKeyValues();
+            
+            const errorMessages: Message[] = [
+              ...currentMessages,
+              {
+                role: "assistant" as const,
+                content: "I encountered an issue with the conversation context. Let me clear it and try again. Please resend your message.",
+              },
+            ];
+            setMessages(errorMessages);
+          } else {
+            // Handle other generation errors
+            const errorMessage = generationError instanceof Error ? generationError.message : 'Unknown error';
+            const errorMessages: Message[] = [
+              ...currentMessages,
+              {
+                role: "assistant" as const,
+                content: `Error generating response: ${errorMessage}`,
+              },
+            ];
+            setMessages(errorMessages);
+          }
+        }
       
     } catch (error) {
       const errorMessage = getErrorMessage(error);
@@ -496,10 +446,7 @@ ${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '
         },
       ];
       setMessages(errorMessages);
-      // Update summary on errors only if significant conversation exists
-      if (currentMessages.length > 2) {
-      updateIdeaSummary(currentMessages);
-      }
+      // Skip summary updates on errors to avoid compounding issues
     } finally {
       setIsGenerating(false);
       setTimeout(() => inputRef.current?.focus(), 0);
