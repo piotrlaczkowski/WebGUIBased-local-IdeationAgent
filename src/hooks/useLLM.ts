@@ -172,7 +172,9 @@ export const useLLM = (modelId?: string) => {
             skip_prompt: true,
             skip_special_tokens: false,
             callback_function: (token: string) => {
-              onToken(token);
+              if (token && token.trim()) {
+                onToken(token);
+              }
             },
           })
         : undefined;
@@ -196,7 +198,8 @@ export const useLLM = (modelId?: string) => {
         })[0]
         .replace(/<\|im_end\|>$/, "");
 
-      return response;
+      // Ensure we return a valid string
+      return response || "I'm sorry, I couldn't generate a response. Please try again.";
     },
     [],
   );

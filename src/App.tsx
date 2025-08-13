@@ -438,7 +438,7 @@ const App: React.FC = () => {
       }
 
         // Add empty assistant message for streaming
-        const updatedMessages = [...currentMessages, { role: "assistant", content: "" }];
+        const updatedMessages: Message[] = [...currentMessages, { role: "assistant" as const, content: "" }];
         setMessages(updatedMessages);
 
         let accumulatedContent = "";
@@ -450,7 +450,7 @@ const App: React.FC = () => {
             setMessages((current) => {
               const updated = [...current];
               updated[updated.length - 1] = {
-                role: "assistant",
+                role: "assistant" as const,
                 content: accumulatedContent,
               };
               return updated;
@@ -459,7 +459,7 @@ const App: React.FC = () => {
         );
 
         // Update the final message with the complete response
-        const finalMessages = [...currentMessages, { role: "assistant", content: response }];
+        const finalMessages: Message[] = [...currentMessages, { role: "assistant" as const, content: response }];
         setMessages(finalMessages);
       
       // Update idea summary with complete conversation history
