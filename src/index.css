@@ -67,6 +67,66 @@ body {
   -webkit-touch-callout: none;
 }
 
+/* Markdown styles - restore default styles within markdown container */
+.markdown > * {
+  all: revert;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+.markdown ul,
+.markdown ol {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.markdown li {
+  margin-bottom: 0.5em;
+}
+
+.markdown blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+  color: #9ca3af;
+}
+
+.markdown pre {
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.markdown code {
+  background-color: #374151;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.markdown pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
 /* Custom animations */
 @keyframes fade-in {
   from {

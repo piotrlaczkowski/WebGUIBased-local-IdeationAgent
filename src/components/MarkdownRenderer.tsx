@@ -18,7 +18,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   }
 
   // Custom components for enhanced styling
-  const components = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const components: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     h1: ({ children, ...props }: any) => (
       <div className="mb-8 text-center">
         <div className="inline-flex items-center bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 rounded-2xl px-8 py-4 shadow-2xl interactive-element">
@@ -30,38 +32,45 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         <div className="mt-4 w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-400 mx-auto rounded-full"></div>
       </div>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     h2: ({ children, ...props }: any) => (
       <div className="mb-4 text-xl font-bold text-blue-300" {...props}>
         <span className="mr-2">🎯</span>
         {children}
       </div>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     h3: ({ children, ...props }: any) => (
       <div className="mb-4 text-lg font-semibold text-green-300" {...props}>
         <span className="mr-2">⚙️</span>
         {children}
       </div>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     p: ({ children, ...props }: any) => (
       <p className="text-gray-300 mb-3 leading-relaxed" {...props}>
         {children}
       </p>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     strong: ({ children, ...props }: any) => (
       <strong className="gradient-text font-bold" {...props}>
         {children}
       </strong>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     em: ({ children, ...props }: any) => (
       <em className="text-blue-300 italic" {...props}>
         {children}
       </em>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     code: ({ children, ...props }: any) => (
       <code className="bg-gray-700 text-green-300 px-2 py-1 rounded text-sm font-mono border border-green-500/30" {...props}>
         {children}
       </code>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     li: ({ children, ...props }: any) => (
       <div className="list-item-hover p-3 group interactive-element summary-card">
         <div className="flex items-start">
@@ -74,11 +83,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         </div>
       </div>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ul: ({ children, ...props }: any) => (
       <div className="space-y-2" {...props}>
         {children}
       </div>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ol: ({ children, ...props }: any) => (
       <div className="space-y-2" {...props}>
         {children}
@@ -96,36 +107,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           {content}
         </ReactMarkdown>
       </div>
-      
-      {/* Only show progress indicator for summary content, not chat messages */}
-      {content.length > 200 && (
-        <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-cyan-900/40 rounded-2xl border border-blue-500/30 summary-card">
-          <div className="flex items-center justify-between text-sm text-blue-200 mb-4">
-            <div className="flex items-center">
-              <span className="text-2xl mr-3 animate-bounce">🚀</span>
-              <span className="font-bold text-lg gradient-text">Development Status</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center progress-badge">
-                <div className="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                <span className="text-xs font-semibold">ACTIVE</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div 
-              className="h-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-full progress-bar"
-              style={{ '--progress-width': '75%' } as React.CSSProperties}
-            ></div>
-          </div>
-          
-          <div className="mt-3 text-xs text-gray-400 text-center">
-            Idea structure automatically updated after each conversation
-          </div>
-        </div>
-      )}
     </div>
   );
 };
