@@ -22,6 +22,7 @@ import ExamplePrompts from "./components/ExamplePrompts";
 import IdeaSummary from "./components/IdeaSummary";
 import SummaryUpdateNotification from "./components/SummaryUpdateNotification";
 import ContextModeIndicator from "./components/ContextModeIndicator";
+import MarkdownRenderer from "./components/MarkdownRenderer";
 
 import { LoadingScreen } from "./components/LoadingScreen";
 
@@ -830,45 +831,8 @@ ${messages.map((msg) => {
                           <div className={`relative ${isMobile ? 'p-3' : 'p-4'} rounded-2xl bg-gradient-to-br from-gray-700 via-gray-800 to-gray-700 shadow-lg flex-1 border border-gray-600`}>
                             <div className="absolute -left-2 top-4 w-0 h-0 border-t-4 border-b-4 border-r-8 border-transparent border-r-gray-700"></div>
                             <div className={`${isMobile ? 'text-sm' : 'text-sm'} text-gray-100 leading-relaxed`}>
-                              {msg.content.split('\n').map((line, lineIndex) => {
-                                if (!line.trim()) return <br key={lineIndex} />;
-                                
-                                // Style questions differently
-                                if (line.includes('?')) {
-                      return (
-                                    <div key={lineIndex} className="mb-2">
-                                      <span className="text-blue-300 font-medium">
-                                        {line.startsWith('•') ? (
-                                          <>
-                                            <span className="text-green-400 mr-2">•</span>
-                                            {line.substring(1).trim()}
-                                          </>
-                                        ) : (
-                                          line
-                                        )}
-                                      </span>
-                        </div>
-                      );
-                    }
-
-                                // Style bullet points
-                                if (line.startsWith('•')) {
-                    return (
-                                    <div key={lineIndex} className="mb-1 ml-2">
-                                      <span className="text-green-400 mr-2">•</span>
-                                      <span className="text-gray-200">{line.substring(1).trim()}</span>
-                      </div>
-                    );
-                                }
-                                
-                                // Regular text
-                    return (
-                                  <div key={lineIndex} className="mb-2">
-                                    <span className="text-gray-100">{line}</span>
-                                </div>
-                                );
-                              })}
-                              </div>
+                              <MarkdownRenderer content={msg.content} />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -879,8 +843,8 @@ ${messages.map((msg) => {
               )}
             </div>
 
-            <div className={`${isMobile ? 'input-container-mobile safe-area-bottom' : 'flex'} ${isMobile ? '' : 'gap-2'}`}>
-              <div className={`flex ${isMobile ? 'gap-2' : ''}`}>
+            <div className={`${isMobile ? 'input-container-mobile safe-area-bottom' : 'w-full px-4'}`}>
+              <div className={`flex ${isMobile ? 'gap-2' : 'w-full max-w-4xl mx-auto'}`}>
                 <input
                   ref={inputRef}
                   type="text"
@@ -893,7 +857,7 @@ ${messages.map((msg) => {
                     handleSendMessage()
                   }
                   disabled={isGenerating || !isReady}
-                  className={`flex-grow bg-gray-700 ${isMobile ? 'rounded-lg p-3 text-base text-mobile' : 'rounded-l-lg p-3'} focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50`}
+                  className={`flex-grow bg-gray-700 ${isMobile ? 'rounded-lg p-3 text-base text-mobile' : 'rounded-l-lg p-4 text-base min-w-0'} focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 transition-all`}
                   placeholder={
                     isReady
                       ? ideaSummary 
@@ -905,7 +869,7 @@ ${messages.map((msg) => {
                 <button
                   onClick={handleSendMessage}
                   disabled={isGenerating || !isReady}
-                  className={`bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold ${isMobile ? 'p-3 rounded-lg min-w-[48px]' : 'p-3 rounded-r-lg'} transition-colors touch-feedback`}
+                  className={`bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold ${isMobile ? 'p-3 rounded-lg min-w-[48px]' : 'p-4 rounded-r-lg min-w-[60px]'} transition-colors touch-feedback flex items-center justify-center`}
                 >
                   <Play size={isMobile ? 18 : 20} />
                 </button>

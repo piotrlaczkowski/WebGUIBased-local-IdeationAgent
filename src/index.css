@@ -35,6 +35,21 @@ body {
   overflow-x: hidden;
 }
 
+/* Desktop input improvements */
+@media (min-width: 769px) {
+  .input-field-desktop {
+    min-width: 400px;
+    width: 100%;
+    max-width: none;
+  }
+  
+  .input-container-desktop {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
 /* Mobile-first responsive breakpoints */
 .container-mobile {
   width: 100%;
