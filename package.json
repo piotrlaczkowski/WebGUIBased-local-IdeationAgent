@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
-    "build:github": "VITE_BASE_PATH=/LFM2-WebGPU-IDEATOR/ npm run build",
+    "build:github": "VITE_BASE_PATH=/WebGUIBased-local-IdeationAgent/ npm run build",
     "serve": "npm run build && npm run preview"
   },
   "dependencies": {

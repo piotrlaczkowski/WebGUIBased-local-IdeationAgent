@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   AutoModelForCausalLM,
@@ -17,7 +18,7 @@ interface LLMInstance {
   tokenizer: any;
 }
 
-let moduleCache: {
+const moduleCache: {
   [modelId: string]: {
     instance: LLMInstance | null;
     loadingPromise: Promise<LLMInstance> | null;

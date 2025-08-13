@@ -1,6 +1,6 @@
 import type React from "react";
 
-const ResultBlock: React.FC<{ error?: string; result?: any }> = ({
+const ResultBlock: React.FC<{ error?: string; result?: unknown }> = ({
   error,
   result,
 }) => (
@@ -13,7 +13,7 @@ const ResultBlock: React.FC<{ error?: string; result?: any }> = ({
   >
     {error ? <p className="text-red-300 text-sm">Error: {error}</p> : null}
     <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-auto mt-2">
-      {typeof result === "object" ? JSON.stringify(result, null, 2) : result}
+      {typeof result === "object" && result !== null ? JSON.stringify(result, null, 2) : String(result || '')}
     </pre>
   </div>
 );

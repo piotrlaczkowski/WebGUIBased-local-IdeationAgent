@@ -257,7 +257,9 @@ export const LoadingScreen = ({
             try {
               const cacheKey = `onnx-community/LFM2-${selectedModelId}-ONNX`;
               localStorage.setItem(`model_cached_${cacheKey}`, 'true');
-            } catch {}
+            } catch (error) {
+              console.warn('Failed to set cache flag:', error);
+            }
             loadSelectedModel();
           }}
         />

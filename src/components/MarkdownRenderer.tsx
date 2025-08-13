@@ -67,8 +67,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   const parseMarkdown = (text: string): React.ReactNode[] => {
     const lines = text.split('\n');
     const elements: React.ReactNode[] = [];
-    let currentSection: { title: string; content: string[]; emoji: string; level: number } | null = null;
-    let lineIndex = 0;
 
     const processLine = (line: string, index: number): React.ReactNode | null => {
       // Skip empty lines
@@ -96,13 +94,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           );
         }
 
-        return { type: 'header', level, emoji, title, index };
+        // Return null for now - headers will be processed differently
+        return null;
       }
 
       // List items with enhanced styling
-      if (line.match(/^[•\-\*]\s+/)) {
-        const itemText = line.replace(/^[•\-\*]\s+/, '');
-        const processedText = processInlineFormatting(itemText);
+      if (line.match(/^[•\-*]\s+/)) {
+        const itemText = line.replace(/^[•\-*]\s+/, '');
         
         // Extract emoji from the item text if present
         const emojiMatch = itemText.match(/^([^\w\s]+)\s*(.*)/);

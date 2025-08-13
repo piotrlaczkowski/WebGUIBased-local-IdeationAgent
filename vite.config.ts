@@ -11,7 +11,7 @@ export default defineConfig(({ command, mode }) => {
   // This can be overridden with VITE_BASE_PATH environment variable
   const basePath = isDevelopment 
     ? '/' 
-    : process.env.VITE_BASE_PATH || '/LFM2-WebGPU-IDEATOR/';
+    : process.env.VITE_BASE_PATH || '/WebGUIBased-local-IdeationAgent/';
 
   return {
     plugins: [react(), tailwindcss()],

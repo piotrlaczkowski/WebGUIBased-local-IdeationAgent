@@ -17,7 +17,7 @@ import {
 import { DEFAULT_SYSTEM_PROMPT } from "./constants/systemPrompt";
 import { DB_NAME, SETTINGS_STORE_NAME } from "./constants/db";
 
-import ResultBlock from "./components/ResultBlock";
+
 import ExamplePrompts from "./components/ExamplePrompts";
 import IdeaSummary from "./components/IdeaSummary";
 import SummaryUpdateNotification from "./components/SummaryUpdateNotification";
@@ -92,7 +92,7 @@ const App: React.FC = () => {
     clearPastKeyValues();
   }, [clearPastKeyValues]);
 
-  const extractIdeaSummary = (conversationHistory: Message[]): string => {
+  const extractIdeaSummary = useCallback((conversationHistory: Message[]): string => {
     const userMessages = conversationHistory.filter(msg => msg.role === "user");
     const assistantMessages = conversationHistory.filter(msg => msg.role === "assistant");
     
@@ -102,12 +102,10 @@ const App: React.FC = () => {
 
     let summary = "# 💡 Idea Development Summary\n\n";
     
-    // Extract and analyze user content
-    const allUserContent = userMessages.map(msg => msg.content).join(" ");
-    const lowerContent = allUserContent.toLowerCase();
+
     
     // Enhanced keyword detection with context
-    const extractInfo = (keywords: string[], context: string) => {
+    const extractInfo = (keywords: string[]) => {
       const found: string[] = [];
       userMessages.forEach(msg => {
         const msgLower = msg.content.toLowerCase();
@@ -119,13 +117,13 @@ const App: React.FC = () => {
     };
 
     // Smarter content extraction
-    const conceptInfo = extractInfo(["want to", "idea", "build", "create", "develop", "make"], lowerContent);
-    const problemInfo = extractInfo(["problem", "solve", "issue", "challenge", "need", "pain"], lowerContent);
-    const userInfo = extractInfo(["user", "customer", "people", "audience", "target", "for"], lowerContent);
-    const featureInfo = extractInfo(["feature", "function", "should", "will", "can", "include"], lowerContent);
-    const techInfo = extractInfo(["technology", "tech", "material", "platform", "system", "using"], lowerContent);
-    const budgetInfo = extractInfo(["budget", "cost", "price", "money", "eur", "$", "cheap", "expensive"], lowerContent);
-    const timelineInfo = extractInfo(["timeline", "time", "deadline", "when", "schedule", "month", "year"], lowerContent);
+    const conceptInfo = extractInfo(["want to", "idea", "build", "create", "develop", "make"]);
+    const problemInfo = extractInfo(["problem", "solve", "issue", "challenge", "need", "pain"]);
+    const userInfo = extractInfo(["user", "customer", "people", "audience", "target", "for"]);
+    const featureInfo = extractInfo(["feature", "function", "should", "will", "can", "include"]);
+    const techInfo = extractInfo(["technology", "tech", "material", "platform", "system", "using"]);
+    const budgetInfo = extractInfo(["budget", "cost", "price", "money", "eur", "$", "cheap", "expensive"]);
+    const timelineInfo = extractInfo(["timeline", "time", "deadline", "when", "schedule", "month", "year"]);
     
     // Extract questions asked by AI for better tracking
     const questionsAsked = assistantMessages
@@ -148,7 +146,7 @@ const App: React.FC = () => {
     // Problem & Solution
     if (problemInfo.length > 0) {
       summary += "## 🎯 Problem & Solution\n";
-      problemInfo.slice(0, 2).forEach((info, index) => {
+      problemInfo.slice(0, 2).forEach((info) => {
         summary += `• ${info.length > 100 ? info.substring(0, 100) + "..." : info}\n`;
       });
       summary += "\n";
@@ -219,14 +217,14 @@ const App: React.FC = () => {
     summary += `• **Completion:** ${progressPercentage}% structured\n\n`;
 
     // Status Badge
-    const statusInfo = getDetailedProgressStatus(progressPercentage, sectionsWithContent);
+    const statusInfo = getDetailedProgressStatus(progressPercentage);
     summary += `## ${statusInfo.emoji} Current Status\n`;
     summary += `**Stage:** ${statusInfo.stage}\n`;
     summary += `**Priority:** ${statusInfo.priority}\n`;
     summary += `**Readiness:** ${statusInfo.readiness}\n`;
 
     return summary;
-  };
+  }, []);
 
   // Helper function to generate smart next steps based on available information
   const generateSmartNextSteps = (
@@ -281,7 +279,7 @@ const App: React.FC = () => {
   };
 
   // Helper function to get detailed progress status
-  const getDetailedProgressStatus = (progressPercentage: number, sectionsWithContent: number) => {
+  const getDetailedProgressStatus = (progressPercentage: number) => {
     if (progressPercentage < 20) {
       return {
         emoji: "🌱",
@@ -320,35 +318,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper function to determine progress stage
-  const getProgressStage = (messages: number, topics: number): string => {
-    if (messages < 3) return "🌱 Initial exploration";
-    if (messages < 8) return "🌿 Concept development";
-    if (messages < 15) return "🌳 Detailed planning";
-    if (topics >= 5) return "🚀 Comprehensive structure";
-    return "🎯 Advanced refinement";
-  };
 
-  // Helper function to suggest next areas of focus
-  const getNextSuggestions = (goals: number, audience: number, challenges: number, solutions: number): string[] => {
-    const suggestions = [];
-    
-    if (goals === 0) suggestions.push("📌 Define clear goals");
-    if (audience === 0) suggestions.push("👥 Identify target users");
-    if (challenges === 0) suggestions.push("⚠️ Consider potential challenges");
-    if (solutions === 0) suggestions.push("⚙️ Explore solution approaches");
-    
-    // Advanced suggestions
-    if (goals > 0 && audience > 0 && challenges === 0) suggestions.push("🔍 Risk assessment");
-    if (solutions > 0 && challenges > 0) suggestions.push("📋 Implementation planning");
-    
-    return suggestions.slice(0, 2); // Limit to top 2 suggestions
-  };
 
   // Create conversation summary for context management
   const createConversationSummary = useCallback((messages: Message[]): string => {
     const userMessages = messages.filter(msg => msg.role === "user");
-    const assistantMessages = messages.filter(msg => msg.role === "assistant");
     
     if (messages.length === 0) return "";
     
@@ -417,7 +391,7 @@ const App: React.FC = () => {
     if (!input.trim() || !isReady) return;
 
     const userMessage: Message = { role: "user", content: input };
-    let currentMessages: Message[] = [...messages, userMessage];
+    const currentMessages: Message[] = [...messages, userMessage];
     setMessages(currentMessages);
     setInput("");
     setIsGenerating(true);
@@ -489,10 +463,10 @@ const App: React.FC = () => {
       
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-      const errorMessages = [
+      const errorMessages: Message[] = [
         ...currentMessages,
         {
-          role: "assistant",
+          role: "assistant" as const,
           content: `Error generating response: ${errorMessage}`,
         },
       ];
@@ -536,7 +510,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Failed to load model:", error);
     }
-  }, [selectedModelId, loadModel]);
+  }, [loadModel]);
 
   const loadSelectedModelId = useCallback(async (): Promise<void> => {
     try {
@@ -605,7 +579,7 @@ const App: React.FC = () => {
     setInput(messageText);
 
     const userMessage: Message = { role: "user", content: messageText };
-    let currentMessages: Message[] = [...messages, userMessage];
+    const currentMessages: Message[] = [...messages, userMessage];
     setMessages(currentMessages);
     setInput("");
     setIsGenerating(true);
@@ -668,10 +642,10 @@ const App: React.FC = () => {
       
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-      const errorMessages = [
+      const errorMessages: Message[] = [
         ...currentMessages,
         {
-          role: "assistant",
+          role: "assistant" as const,
           content: `Error generating response: ${errorMessage}`,
         },
       ];
@@ -701,7 +675,7 @@ Generated on: ${new Date().toLocaleDateString()}
 ${ideaSummary}
 
 ## Conversation History
-${messages.map((msg, index) => {
+${messages.map((msg) => {
   if (msg.role === "user") {
     return `**User:** ${msg.content}`;
   } else if (msg.role === "assistant") {

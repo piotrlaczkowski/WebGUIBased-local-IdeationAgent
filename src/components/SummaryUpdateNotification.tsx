@@ -1,5 +1,5 @@
 import React from "react";
-import { Brain, RefreshCw, CheckCircle } from "lucide-react";
+import { Brain, RefreshCw } from "lucide-react";
 
 interface SummaryUpdateNotificationProps {
   isUpdating: boolean;

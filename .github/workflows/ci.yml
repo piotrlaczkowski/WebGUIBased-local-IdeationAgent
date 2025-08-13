@@ -60,13 +60,13 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
       - name: Run ESLint
-        run: ${{ steps.detect-package-manager.outputs.runner }} npm run lint
+        run: ${{ steps.detect-package-manager.outputs.manager }} run lint
 
       - name: Type check
         run: ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit
 
       - name: Build application
-        run: ${{ steps.detect-package-manager.outputs.runner }} npm run build
+        run: ${{ steps.detect-package-manager.outputs.manager }} run build
         env:
           VITE_BASE_PATH: /
 
