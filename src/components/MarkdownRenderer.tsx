@@ -63,6 +63,16 @@ interface CollapsibleSectionProps {
 };
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+  // Handle empty or null content
+  if (!content || content.trim() === '') {
+    return (
+      <div className="text-gray-500 italic text-center py-8">
+        <div className="text-4xl mb-4">🤔</div>
+        <p>Thinking...</p>
+      </div>
+    );
+  }
+
   // Enhanced markdown parsing with better emoji and formatting support
   const parseMarkdown = (text: string): React.ReactNode[] => {
     const lines = text.split('\n');
@@ -94,8 +104,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           );
         }
 
-        // Return null for now - headers will be processed differently
-        return null;
+        // For other headers, just return a simple header element
+        return (
+          <div key={index} className={`mb-4 ${level === 2 ? 'text-xl font-bold text-blue-300' : 'text-lg font-semibold text-green-300'}`}>
+            <span className="mr-2">{emoji}</span>
+            {title}
+          </div>
+        );
       }
 
       // List items with enhanced styling
@@ -247,33 +262,35 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         <div key={index}>{element}</div>
       ))}
       
-      {/* Enhanced progress indicator */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-cyan-900/40 rounded-2xl border border-blue-500/30 summary-card">
-        <div className="flex items-center justify-between text-sm text-blue-200 mb-4">
-          <div className="flex items-center">
-            <span className="text-2xl mr-3 animate-bounce">🚀</span>
-            <span className="font-bold text-lg gradient-text">Development Status</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center progress-badge">
-              <div className="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-              <span className="text-xs font-semibold">ACTIVE</span>
+      {/* Only show progress indicator for summary content, not chat messages */}
+      {content.length > 200 && (
+        <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-cyan-900/40 rounded-2xl border border-blue-500/30 summary-card">
+          <div className="flex items-center justify-between text-sm text-blue-200 mb-4">
+            <div className="flex items-center">
+              <span className="text-2xl mr-3 animate-bounce">🚀</span>
+              <span className="font-bold text-lg gradient-text">Development Status</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center progress-badge">
+                <div className="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="text-xs font-semibold">ACTIVE</span>
+              </div>
             </div>
           </div>
+          
+          {/* Progress bar */}
+          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+            <div 
+              className="h-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-full progress-bar"
+              style={{ '--progress-width': '75%' } as React.CSSProperties}
+            ></div>
+          </div>
+          
+          <div className="mt-3 text-xs text-gray-400 text-center">
+            Idea structure automatically updated after each conversation
+          </div>
         </div>
-        
-        {/* Progress bar */}
-        <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-          <div 
-            className="h-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-full progress-bar"
-            style={{ '--progress-width': '75%' } as React.CSSProperties}
-          ></div>
-        </div>
-        
-        <div className="mt-3 text-xs text-gray-400 text-center">
-          Idea structure automatically updated after each conversation
-        </div>
-      </div>
+      )}
     </div>
   );
 };

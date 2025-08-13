@@ -437,12 +437,14 @@ const App: React.FC = () => {
         });
       }
 
-        setMessages([...currentMessages, { role: "assistant", content: "" }]);
+        // Add empty assistant message for streaming
+        const updatedMessages = [...currentMessages, { role: "assistant", content: "" }];
+        setMessages(updatedMessages);
 
         let accumulatedContent = "";
         const response = await generateResponse(
           messagesForGeneration,
-        [], // No tools
+          [], // No tools
           (token: string) => {
             accumulatedContent += token;
             setMessages((current) => {
@@ -456,8 +458,9 @@ const App: React.FC = () => {
           },
         );
 
-        currentMessages.push({ role: "assistant", content: response });
-      setMessages(currentMessages);
+        // Update the final message with the complete response
+        const finalMessages = [...currentMessages, { role: "assistant", content: response }];
+        setMessages(finalMessages);
       
       // Update idea summary with complete conversation history
       updateIdeaSummary(currentMessages);
