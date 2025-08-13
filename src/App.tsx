@@ -6,8 +6,9 @@ import React, {
   useMemo,
 } from "react";
 import { openDB, type IDBPDatabase } from "idb";
-import { Play, Zap, RotateCcw, Settings, X } from "lucide-react";
+import { Play, Zap, RotateCcw, Settings, X, Users } from "lucide-react";
 import { useLLM } from "./hooks/useLLM";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
 
 import {
   getErrorMessage,
@@ -23,6 +24,7 @@ import IdeaSummary from "./components/IdeaSummary";
 import SummaryUpdateNotification from "./components/SummaryUpdateNotification";
 import ContextModeIndicator from "./components/ContextModeIndicator";
 import MarkdownRenderer from "./components/MarkdownRenderer";
+import AgentsPage from "./components/AgentsPage";
 
 import { LoadingScreen } from "./components/LoadingScreen";
 
@@ -42,7 +44,74 @@ async function getDB(): Promise<IDBPDatabase> {
   });
 }
 
-const App: React.FC = () => {
+const Navigation: React.FC = () => {
+  const location = useLocation();
+  
+  return (
+    <div className="bg-gray-800 border-b border-gray-700 p-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <h1 className="text-2xl font-bold text-gray-200">
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Idea Structuring Agent
+            </span>
+          </h1>
+          <nav className="flex items-center gap-4">
+            <Link
+              to="/"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                location.pathname === "/"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-400 hover:text-white hover:bg-gray-700"
+              }`}
+            >
+              💬 Single Agent
+            </Link>
+            <Link
+              to="/agents"
+              className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                location.pathname === "/agents"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-400 hover:text-white hover:bg-gray-700"
+              }`}
+            >
+              <Users size={16} />
+              Multi-Agent
+            </Link>
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface MainAppProps {
+  selectedModelId: string;
+  setSelectedModelId: (modelId: string) => void;
+  isLoading: boolean;
+  isReady: boolean;
+  error: string | null;
+  progress: number;
+  loadModel: () => Promise<any>;
+  generateResponse: (
+    messages: Array<{ role: string; content: string }>,
+    tools: Array<any>,
+    onToken?: (token: string) => void
+  ) => Promise<string>;
+  clearPastKeyValues: () => void;
+}
+
+const MainApp: React.FC<MainAppProps> = ({
+  selectedModelId,
+  setSelectedModelId,
+  isLoading,
+  isReady,
+  error,
+  progress,
+  loadModel,
+  generateResponse,
+  clearPastKeyValues,
+}) => {
   const [systemPrompt, setSystemPrompt] = useState<string>(
     DEFAULT_SYSTEM_PROMPT,
   );
@@ -56,7 +125,6 @@ const App: React.FC = () => {
   const [conversationSummary, setConversationSummary] = useState<string>("");
   const [isUpdatingSummary, setIsUpdatingSummary] = useState<boolean>(false);
   const isMobile = useMemo(isMobileOrTablet, []);
-  const [selectedModelId, setSelectedModelId] = useState<string>("350M");
   
   // Context window management constants
   const MAX_CONTEXT_MESSAGES = 12; // Maximum messages before switching to summary mode
@@ -65,18 +133,9 @@ const App: React.FC = () => {
     useState<boolean>(false);
   
   // Mobile navigation state
-  const [mobileActiveTab, setMobileActiveTab] = useState<'chat' | 'summary'>('chat');
+  const [mobileActiveTab, setMobileActiveTab] = useState<'chat' | 'summary'>('summary');
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const {
-    isLoading,
-    isReady,
-    error,
-    progress,
-    loadModel,
-    generateResponse,
-    clearPastKeyValues,
-  } = useLLM(selectedModelId);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -93,231 +152,153 @@ const App: React.FC = () => {
     clearPastKeyValues();
   }, [clearPastKeyValues]);
 
-  const extractIdeaSummary = useCallback((conversationHistory: Message[]): string => {
+
+
+  const extractIdeaSummary = useCallback(async (conversationHistory: Message[]): Promise<string> => {
     const userMessages = conversationHistory.filter(msg => msg.role === "user");
-    const assistantMessages = conversationHistory.filter(msg => msg.role === "assistant");
     
     if (conversationHistory.length === 0) {
       return "";
     }
 
-    let summary = "# 💡 Idea Development Summary\n\n";
-    
+    // Comprehensive journalist-style interview summary prompt
+    const summaryPrompt = `You are a lead journalist creating a comprehensive interview summary. Your mission is to document EVERYTHING learned during this interview and identify what still needs investigation.
 
-    
-    // Enhanced keyword detection with context
-    const extractInfo = (keywords: string[]) => {
-      const found: string[] = [];
-      userMessages.forEach(msg => {
-        const msgLower = msg.content.toLowerCase();
-        if (keywords.some(keyword => msgLower.includes(keyword))) {
-          found.push(msg.content);
+COMPLETE INTERVIEW TRANSCRIPT:
+${conversationHistory.map(msg => `${msg.role === 'user' ? '👤 Interviewee' : '🎙️ Journalist'}: ${msg.content}`).join('\n\n')}
+
+📰 COMPREHENSIVE DOCUMENTATION INSTRUCTIONS:
+- Document ALL information the interviewee has provided (no matter how small)
+- Extract EVERY detail, fact, preference, constraint, or goal mentioned
+- Include specific quotes, numbers, timelines, or requirements stated
+- Identify ALL information gaps that need investigation
+- Create comprehensive follow-up questions for complete story
+
+📋 COMPLETE INTERVIEW SUMMARY STRUCTURE:
+
+# 💡 Complete Idea Development Interview Summary
+
+## 🎯 What We Know: Core Concept & Vision
+[Document EVERYTHING the user said about their main idea - be comprehensive]
+
+## 🎯 Problem & Solution Analysis
+[Include ALL details about problems mentioned and proposed solutions]
+
+## 👥 Target Audience & Market Information
+[Document ALL details about users, market, audience mentioned]
+
+## ⚡ Features, Functionality & Implementation
+[Include ALL features, technical details, functionality described]
+
+## 🔧 Resources, Requirements & Constraints
+[Document ALL resources, budget, timeline, constraints mentioned]
+
+## 💬 Additional Details & Context
+[Include ANY other information provided - preferences, experiences, concerns, etc.]
+
+## 📊 Current Status & Progress Report
+[Always include - comprehensive view of development stage]
+
+## 🎙️ Critical Follow-Up Investigation Areas
+[Always include - comprehensive list of 6-10 investigative questions covering ALL missing information needed for complete story]
+
+🎯 COMPREHENSIVE DOCUMENTATION RULES:
+- Include EVERY piece of information provided, no matter how small
+- Use direct quotes extensively to preserve the interviewee's exact words
+- Organize information comprehensively - don't leave anything out
+- Identify ALL areas needing further investigation
+- Create investigative questions that cover every missing piece of the puzzle
+- Make this a complete record of everything learned so far`;
+
+    try {
+      const summary = await generateResponse([
+        { role: "system", content: summaryPrompt }
+      ], []);
+      
+      // Basic validation for summary
+      if (!summary || summary.length < 50) {
+        throw new Error('Summary too short or empty');
+      }
+      
+      // Check for obvious placeholder content
+      if (summary.includes('🤔 Thinking...') || summary.trim() === '...' || summary.trim() === '') {
+        throw new Error('Summary contains placeholder content');
+      }
+      
+      return summary;
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      
+            // Comprehensive journalist-style interview fallback summary
+      let fallbackSummary = "# 💡 Complete Idea Development Interview Summary\n\n";
+      
+      if (userMessages.length > 0) {
+        const allUserInputs = userMessages.map(msg => 
+          msg.content.replace(/🤔|Thinking\.\.\./g, '').trim()
+        ).filter(content => content.length > 0);
+        
+        // Document everything we learned
+        fallbackSummary += `## 🎯 What We Know: Core Concept & Vision\n`;
+        fallbackSummary += `**Complete interview record:**\n\n`;
+        allUserInputs.forEach((input, index) => {
+          fallbackSummary += `**Interview Exchange ${index + 1}:** "${input}"\n\n`;
+        });
+        
+        // Extract any additional context from assistant responses
+        const assistantMessages = conversationHistory.filter(msg => msg.role === "assistant");
+        if (assistantMessages.length > 0) {
+          fallbackSummary += `## 💬 Additional Details & Context\n`;
+          fallbackSummary += `**Topics explored during interview:**\n`;
+          assistantMessages.forEach((msg) => {
+            // Extract key topics from assistant questions
+            const content = msg.content.toLowerCase();
+            if (content.includes('who') || content.includes('target')) {
+              fallbackSummary += `- Target audience discussion initiated\n`;
+            }
+            if (content.includes('problem') || content.includes('solve')) {
+              fallbackSummary += `- Problem definition exploration started\n`;
+            }
+            if (content.includes('how') || content.includes('work')) {
+              fallbackSummary += `- Implementation approach investigated\n`;
+            }
+            if (content.includes('budget') || content.includes('resource')) {
+              fallbackSummary += `- Resource requirements discussed\n`;
+            }
+          });
+          fallbackSummary += '\n';
         }
-      });
-      return found;
-    };
-
-    // Smarter content extraction
-    const conceptInfo = extractInfo(["want to", "idea", "build", "create", "develop", "make"]);
-    const problemInfo = extractInfo(["problem", "solve", "issue", "challenge", "need", "pain"]);
-    const userInfo = extractInfo(["user", "customer", "people", "audience", "target", "for"]);
-    const featureInfo = extractInfo(["feature", "function", "should", "will", "can", "include"]);
-    const techInfo = extractInfo(["technology", "tech", "material", "platform", "system", "using"]);
-    const budgetInfo = extractInfo(["budget", "cost", "price", "money", "eur", "$", "cheap", "expensive"]);
-    const timelineInfo = extractInfo(["timeline", "time", "deadline", "when", "schedule", "month", "year"]);
-    
-    // Extract questions asked by AI for better tracking
-    const questionsAsked = assistantMessages
-      .map(msg => msg.content.split(/[.!]+/).filter(s => s.includes("?")))
-      .flat()
-      .filter(q => q.trim().length > 10)
-      .slice(0, 5);
-
-    // Core Concept Section - Always present
-    summary += "## 🎯 Core Concept\n";
-    if (conceptInfo.length > 0) {
-      const mainIdea = conceptInfo[0];
-      summary += `**Primary Idea:** ${mainIdea.length > 120 ? mainIdea.substring(0, 120) + "..." : mainIdea}\n`;
-    } else if (userMessages.length > 0) {
-      const firstMessage = userMessages[0].content;
-      summary += `**Primary Idea:** ${firstMessage.length > 120 ? firstMessage.substring(0, 120) + "..." : firstMessage}\n`;
-    }
-    summary += "\n";
-
-    // Problem & Solution
-    if (problemInfo.length > 0) {
-      summary += "## 🎯 Problem & Solution\n";
-      problemInfo.slice(0, 2).forEach((info) => {
-        summary += `• ${info.length > 100 ? info.substring(0, 100) + "..." : info}\n`;
-      });
-      summary += "\n";
-    }
-
-    // Target Users & Market
-    if (userInfo.length > 0) {
-      summary += "## 👥 Target Users & Market\n";
-      userInfo.slice(0, 2).forEach(info => {
-        summary += `• ${info.length > 100 ? info.substring(0, 100) + "..." : info}\n`;
-      });
-      summary += "\n";
-    }
-
-    // Features & Functionality
-    if (featureInfo.length > 0) {
-      summary += "## ⚡ Features & Functionality\n";
-      featureInfo.slice(0, 3).forEach(info => {
-        summary += `• ${info.length > 100 ? info.substring(0, 100) + "..." : info}\n`;
-      });
-      summary += "\n";
-    }
-
-    // Technical & Resource Requirements
-    if (techInfo.length > 0 || budgetInfo.length > 0 || timelineInfo.length > 0) {
-      summary += "## 🔧 Technical & Resource Requirements\n";
-      
-      if (budgetInfo.length > 0) {
-        summary += `• **Budget:** ${budgetInfo[0]}\n`;
+        
+        // Comprehensive status report
+        fallbackSummary += `## 📊 Current Status & Progress Report\n`;
+        fallbackSummary += `- **Interview Stage:** Active idea development investigation\n`;
+        fallbackSummary += `- **Total Exchanges:** ${conversationHistory.length} conversation exchanges\n`;
+        fallbackSummary += `- **User Responses:** ${userMessages.length} detailed input${userMessages.length > 1 ? 's' : ''} from interviewee\n`;
+        fallbackSummary += `- **Information Density:** ${Math.min(userMessages.length * 15, 40)}% of complete idea profile documented\n`;
+        fallbackSummary += `- **Investigation Depth:** ${assistantMessages.length} follow-up question${assistantMessages.length > 1 ? 's' : ''} asked\n\n`;
+        
+        // Comprehensive follow-up investigation
+        fallbackSummary += `## 🎙️ Critical Follow-Up Investigation Areas\n`;
+        fallbackSummary += `**Complete investigative plan for next interview sessions:**\n\n`;
+        fallbackSummary += `1. **Problem Deep-Dive:** What specific problem does this solve? Who experiences this problem? How severe is it?\n`;
+        fallbackSummary += `2. **Target Audience Analysis:** Who exactly are your users? What are their demographics, behaviors, pain points?\n`;
+        fallbackSummary += `3. **Solution Mechanics:** How exactly does your solution work? What's the step-by-step process?\n`;
+        fallbackSummary += `4. **Value Proposition:** What makes this unique? Why is this better than existing solutions?\n`;
+        fallbackSummary += `5. **Implementation Strategy:** How will you build this? What resources do you need?\n`;
+        fallbackSummary += `6. **Market Context:** Who else is solving this? What's your competitive advantage?\n`;
+        fallbackSummary += `7. **Success Metrics:** How will you measure success? What are your specific goals?\n`;
+        fallbackSummary += `8. **Timeline & Resources:** When do you want this completed? What's your budget/timeline?\n\n`;
+        
+        fallbackSummary += `*🎙️ **Interview Status:** Comprehensive investigation in progress. Continue with detailed questioning to document complete idea profile.*\n\n`;
+      } else {
+        fallbackSummary += `## 🎙️ Ready to Begin Comprehensive Interview\n`;
+        fallbackSummary += `Share your idea to start the complete investigative interview process that will help you fully structure and define every aspect of your concept.\n\n`;
       }
       
-      if (techInfo.length > 0) {
-        summary += `• **Technology/Materials:** ${techInfo[0]}\n`;
-      }
-      
-      if (timelineInfo.length > 0) {
-        summary += `• **Timeline:** ${timelineInfo[0]}\n`;
-      }
-      summary += "\n";
+      return fallbackSummary;
     }
+  }, [generateResponse]);
 
-    // Exploration Progress
-    if (questionsAsked.length > 0) {
-      summary += "## 🔍 Areas Being Explored\n";
-      questionsAsked.forEach(question => {
-        summary += `• ${question.trim()}?\n`;
-      });
-      summary += "\n";
-    }
 
-    // Smart Next Steps based on current info
-    summary += "## 📝 Next Steps & Focus Areas\n";
-    const nextSteps = generateSmartNextSteps(conceptInfo, problemInfo, userInfo, featureInfo, techInfo, budgetInfo);
-    nextSteps.forEach(step => {
-      summary += `• ${step}\n`;
-    });
-    summary += "\n";
-
-    // Progress Tracking
-    const sectionsWithContent = [conceptInfo, problemInfo, userInfo, featureInfo, techInfo, budgetInfo].filter(arr => arr.length > 0).length;
-    const totalSections = 6;
-    const progressPercentage = Math.round((sectionsWithContent / totalSections) * 100);
-    
-    summary += "## 📊 Development Progress\n";
-    summary += `• **Conversation Depth:** ${conversationHistory.length} exchanges\n`;
-    summary += `• **Ideas Captured:** ${userMessages.length} user inputs\n`;
-    summary += `• **Areas Covered:** ${sectionsWithContent}/${totalSections} key areas\n`;
-    summary += `• **Completion:** ${progressPercentage}% structured\n\n`;
-
-    // Status Badge
-    const statusInfo = getDetailedProgressStatus(progressPercentage);
-    summary += `## ${statusInfo.emoji} Current Status\n`;
-    summary += `**Stage:** ${statusInfo.stage}\n`;
-    summary += `**Priority:** ${statusInfo.priority}\n`;
-    summary += `**Readiness:** ${statusInfo.readiness}\n`;
-
-    return summary;
-  }, []);
-
-  // Helper function to generate smart next steps based on available information
-  const generateSmartNextSteps = (
-    conceptInfo: string[], 
-    problemInfo: string[], 
-    userInfo: string[], 
-    featureInfo: string[], 
-    techInfo: string[], 
-    budgetInfo: string[]
-  ): string[] => {
-    const steps: string[] = [];
-    
-    // Basic completion steps
-    if (conceptInfo.length === 0) {
-      steps.push("🎯 Define core concept and primary objectives");
-    }
-    if (problemInfo.length === 0) {
-      steps.push("🔍 Identify specific problems to solve");
-    }
-    if (userInfo.length === 0) {
-      steps.push("👥 Define target audience and user personas");
-    }
-    if (featureInfo.length === 0) {
-      steps.push("⚡ Outline key features and functionality");
-    }
-    if (techInfo.length === 0) {
-      steps.push("🔧 Specify technical requirements and technology stack");
-    }
-    if (budgetInfo.length === 0) {
-      steps.push("💰 Establish budget constraints and resource planning");
-    }
-    
-    // Advanced steps when basic info is available
-    if (conceptInfo.length > 0 && problemInfo.length > 0 && steps.length < 3) {
-      steps.push("📋 Create detailed project roadmap and milestones");
-    }
-    if (userInfo.length > 0 && featureInfo.length > 0 && steps.length < 3) {
-      steps.push("🎨 Design user experience and interface mockups");
-    }
-    if (techInfo.length > 0 && budgetInfo.length > 0 && steps.length < 3) {
-      steps.push("⚖️ Evaluate technical feasibility vs budget constraints");
-    }
-    
-    // Fallback generic steps
-    if (steps.length === 0) {
-      steps.push("🚀 Begin prototype development and testing");
-      steps.push("📊 Conduct market research and competitive analysis");
-      steps.push("🎯 Refine value proposition and business model");
-    }
-    
-    return steps.slice(0, 5); // Limit to 5 steps
-  };
-
-  // Helper function to get detailed progress status
-  const getDetailedProgressStatus = (progressPercentage: number) => {
-    if (progressPercentage < 20) {
-      return {
-        emoji: "🌱",
-        stage: "Early Ideation",
-        priority: "Concept clarification and goal setting",
-        readiness: "Initial exploration phase"
-      };
-    } else if (progressPercentage < 40) {
-      return {
-        emoji: "🌿",
-        stage: "Concept Development",
-        priority: "Problem definition and target audience",
-        readiness: "Building foundation"
-      };
-    } else if (progressPercentage < 60) {
-      return {
-        emoji: "🌳",
-        stage: "Detailed Planning",
-        priority: "Feature specification and technical planning",
-        readiness: "Structure taking shape"
-      };
-    } else if (progressPercentage < 80) {
-      return {
-        emoji: "🚀",
-        stage: "Advanced Planning",
-        priority: "Implementation roadmap and resource allocation",
-        readiness: "Well-structured and actionable"
-      };
-    } else {
-      return {
-        emoji: "✅",
-        stage: "Comprehensive",
-        priority: "Execution and prototype development",
-        readiness: "Ready for development"
-      };
-    }
-  };
 
 
 
@@ -365,11 +346,17 @@ const App: React.FC = () => {
   }, []);
 
   const updateIdeaSummary = useCallback(async (messages: Message[]) => {
+    // Only update if we have meaningful content
+    const userMessages = messages.filter(msg => msg.role === "user");
+    if (userMessages.length === 0) return;
+    
+    // Debounce summary updates to avoid tensor disposal issues
+    const timeoutId = setTimeout(async () => {
     setIsUpdatingSummary(true);
     
     try {
-      // Update idea summary
-      const newIdeaSummary = extractIdeaSummary(messages);
+        // Update idea summary using LLM with error handling
+        const newIdeaSummary = await extractIdeaSummary(messages);
       setIdeaSummary(newIdeaSummary);
       
       // Update conversation summary if needed
@@ -378,14 +365,40 @@ const App: React.FC = () => {
         setConversationSummary(newConversationSummary);
       }
       
-      // Simulate processing time for user feedback
-      await new Promise(resolve => setTimeout(resolve, 800));
+        // Allow model to settle between calls
+        await new Promise(resolve => setTimeout(resolve, 500));
       
       } catch (error) {
       console.error("Error updating summaries:", error);
+        // Use fallback summary that doesn't require LLM
+        const fallbackSummary = `# 💡 Idea Development Interview Summary
+
+## 🎯 What We Know: Core Concept
+**Latest user input:** "${userMessages[userMessages.length - 1]?.content || 'No input yet'}"
+
+## 📊 Current Status Report
+- **Interview Stage:** Active idea development
+- **Total Information:** ${userMessages.length} response${userMessages.length !== 1 ? 's' : ''} from interviewee
+- **Conversation Length:** ${messages.length} total exchanges
+
+## 🎙️ Critical Follow-Up Questions
+**To continue developing this idea, we need to investigate:**
+
+1. **Problem Definition:** What specific problem does this solve?
+2. **Target Users:** Who exactly needs this solution?
+3. **Implementation:** How would this actually work?
+4. **Value Proposition:** What makes this unique or valuable?
+5. **Resources:** What do you need to make this happen?
+
+*🎙️ Continue the interview to build a comprehensive idea profile.*`;
+        setIdeaSummary(fallbackSummary);
     } finally {
       setIsUpdatingSummary(false);
       }
+    }, 2000); // Increased debounce to 2 seconds to prevent tensor issues
+    
+    // Cleanup timeout on component unmount or new update
+    return () => clearTimeout(timeoutId);
   }, [extractIdeaSummary, createConversationSummary, MAX_CONTEXT_MESSAGES]);
 
   const handleSendMessage = async (): Promise<void> => {
@@ -396,6 +409,12 @@ const App: React.FC = () => {
     setMessages(currentMessages);
     setInput("");
     setIsGenerating(true);
+    
+    // Trigger summary update strategically to avoid tensor disposal issues
+    // Only update on first message or after significant conversation
+    if (messages.length === 0 || messages.length % 2 === 0) {
+      updateIdeaSummary(currentMessages);
+    }
 
     try {
       // Smart context management: Use summary for long conversations
@@ -462,8 +481,10 @@ const App: React.FC = () => {
         const finalMessages: Message[] = [...currentMessages, { role: "assistant" as const, content: response }];
         setMessages(finalMessages);
       
-      // Update idea summary with complete conversation history
-      updateIdeaSummary(currentMessages);
+      // Update idea summary strategically with complete conversation history
+      // Only update after full conversation exchanges to prevent tensor disposal
+      const finalMessagesForSummary = [...currentMessages, { role: "assistant" as const, content: response }];
+      updateIdeaSummary(finalMessagesForSummary);
       
     } catch (error) {
       const errorMessage = getErrorMessage(error);
@@ -475,8 +496,10 @@ const App: React.FC = () => {
         },
       ];
       setMessages(errorMessages);
-      // Update summary even with error to maintain conversation context
+      // Update summary on errors only if significant conversation exists
+      if (currentMessages.length > 2) {
       updateIdeaSummary(currentMessages);
+      }
     } finally {
       setIsGenerating(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -641,7 +664,7 @@ const App: React.FC = () => {
         currentMessages.push({ role: "assistant", content: response });
       setMessages(currentMessages);
       
-      // Update idea summary with final complete conversation
+      // Update idea summary strategically for example clicks
       updateIdeaSummary(currentMessages);
       
     } catch (error) {
@@ -654,8 +677,10 @@ const App: React.FC = () => {
         },
       ];
       setMessages(errorMessages);
-      // Update summary even if there's an error to preserve conversation context
-      updateIdeaSummary(currentMessages);
+      // Update summary on errors only if substantial conversation exists
+      if (currentMessages.length > 1) {
+        updateIdeaSummary(currentMessages);
+      }
     } finally {
       setIsGenerating(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -763,6 +788,12 @@ ${messages.map((msg) => {
                       <div className={`ml-2 ${isMobile ? 'text-xs' : 'text-sm'} font-normal`}>Thinking...</div>
                     </div>
                   )}
+                  {isUpdatingSummary && (
+                    <div className="ml-3 flex items-center text-green-400">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                      <div className={`ml-2 ${isMobile ? 'text-xs' : 'text-sm'} font-normal`}>Updating Summary...</div>
+                    </div>
+                  )}
                 </h1>
               </div>
               <div className="flex items-center gap-2">
@@ -843,6 +874,25 @@ ${messages.map((msg) => {
                   }
                   return null;
                 })
+              )}
+              
+              {/* Summary Update Notification */}
+              {isUpdatingSummary && (
+                <div className="flex justify-start animate-fade-in mb-4">
+                  <div className={`${isMobile ? 'mx-3' : ''} max-w-lg`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 rounded-lg bg-blue-500">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-200">Updating Summary</span>
+                        <div className="text-xs text-gray-500">
+                          AI is analyzing your conversation...
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -948,6 +998,56 @@ ${messages.map((msg) => {
       {/* Summary Update Notification */}
       <SummaryUpdateNotification isUpdating={isUpdatingSummary} />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  // Shared LLM instance for both pages
+  const [selectedModelId, setSelectedModelId] = useState<string>("350M");
+  const {
+    isLoading,
+    isReady,
+    error,
+    progress,
+    loadModel,
+    generateResponse,
+    clearPastKeyValues,
+  } = useLLM(selectedModelId);
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-900">
+        <Navigation />
+        <Routes>
+          <Route path="/" element={
+            <MainApp 
+              selectedModelId={selectedModelId}
+              setSelectedModelId={setSelectedModelId}
+              isLoading={isLoading}
+              isReady={isReady}
+              error={error}
+              progress={progress}
+              loadModel={loadModel}
+              generateResponse={generateResponse}
+              clearPastKeyValues={clearPastKeyValues}
+            />
+          } />
+          <Route path="/agents" element={
+            <AgentsPage 
+              selectedModelId={selectedModelId}
+              setSelectedModelId={setSelectedModelId}
+              isLoading={isLoading}
+              isReady={isReady}
+              error={error}
+              progress={progress}
+              loadModel={loadModel}
+              generateResponse={generateResponse}
+              clearPastKeyValues={clearPastKeyValues}
+            />
+          } />
+        </Routes>
+      </div>
+    </Router>
   );
 };
 

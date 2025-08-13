@@ -174,6 +174,36 @@ body {
   animation: gradient-shift 3s ease infinite;
 }
 
+/* Multi-agent specific animations */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* Hover scale effect for agent cards */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+/* Agent status animations */
+.agent-active {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.agent-completed {
+  animation: scale-in 0.3s ease-out;
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

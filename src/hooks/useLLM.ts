@@ -167,6 +167,8 @@ export const useLLM = (modelId?: string) => {
         return_dict: true,
       });
 
+      console.log('Chat template applied, input shape:', input?.input_ids?.dims || 'unknown');
+
       const streamer = onToken
         ? new TextStreamer(tokenizer, {
             skip_prompt: true,
@@ -179,33 +181,79 @@ export const useLLM = (modelId?: string) => {
           })
         : undefined;
 
-      // Generate the response (reduced tokens for more concise responses)
-      const { sequences, past_key_values } = await model.generate({
-        ...input,
-        past_key_values: pastKeyValuesRef.current,
-        max_new_tokens: 200, // Reduced for more concise responses
-        do_sample: false,
-        temperature: 0.7, // Add some creativity while staying focused
-        streamer,
-        return_dict_in_generate: true,
-      });
-      pastKeyValuesRef.current = past_key_values;
+      try {
 
-      // Decode the generated text with special tokens preserved (except final <|im_end|>) for tool call detection
-      const response = tokenizer
-        .batch_decode(sequences.slice(null, [input.input_ids.dims[1], null]), {
-          skip_special_tokens: false,
-        })[0]
-        .replace(/<\|im_end\|>$/, "");
+        // Generate the response (reduced tokens for more concise responses)
+        // Only pass past_key_values if it's valid to avoid "invalid data location" errors
+        const generateOptions: any = {
+          ...input,
+          max_new_tokens: 200, // Reduced for more concise responses
+          do_sample: false,
+          temperature: 0.7, // Add some creativity while staying focused
+          streamer,
+          return_dict_in_generate: true,
+        };
 
-      // Ensure we return a valid string
-      return response || "I'm sorry, I couldn't generate a response. Please try again.";
+        // Only include past_key_values if it exists and is valid
+        if (pastKeyValuesRef.current && pastKeyValuesRef.current !== null) {
+          generateOptions.past_key_values = pastKeyValuesRef.current;
+        }
+
+        const { sequences, past_key_values } = await model.generate(generateOptions);
+        pastKeyValuesRef.current = past_key_values;
+
+        // Decode the generated text with special tokens preserved (except final <|im_end|>) for tool call detection
+        const response = tokenizer
+          .batch_decode(sequences.slice(null, [input.input_ids.dims[1], null]), {
+            skip_special_tokens: false,
+          })[0]
+          .replace(/<\|im_end\|>$/, "");
+
+        // Ensure we return a valid string
+        return response || "I'm sorry, I couldn't generate a response. Please try again.";
+      } catch (error) {
+        console.error('Error during generation:', error);
+        
+        // If we get a past key values error, clear them and retry once
+        if (error instanceof Error && (error.message.includes('past_conv') || error.message.includes('invalid data location'))) {
+          console.warn('Clearing past key values due to data location error and retrying...');
+          pastKeyValuesRef.current = null;
+          
+          // Retry without past_key_values
+          try {
+            const retryOptions: any = {
+              ...input,
+              max_new_tokens: 200,
+              do_sample: false,
+              temperature: 0.7,
+              streamer: streamer,
+              return_dict_in_generate: true,
+            };
+
+            const { sequences } = await model.generate(retryOptions);
+            
+            const response = tokenizer
+              .batch_decode(sequences.slice(null, [input.input_ids.dims[1], null]), {
+                skip_special_tokens: false,
+              })[0]
+              .replace(/<\|im_end\|>$/, "");
+
+            return response || "I'm sorry, I couldn't generate a response. Please try again.";
+          } catch (retryError) {
+            console.error('Retry also failed:', retryError);
+            throw new Error(`Generation failed: ${retryError instanceof Error ? retryError.message : 'Unknown error'}`);
+          }
+        }
+        
+        throw error;
+      }
     },
     [],
   );
 
-  const clearPastKeyValues = useCallback(() => {
+        const clearPastKeyValues = useCallback(() => {
     pastKeyValuesRef.current = null;
+    console.log('Past key values cleared');
   }, []);
 
   const cleanup = useCallback(() => {

@@ -57,7 +57,7 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
   const [editingSummary, setEditingSummary] = useState(summary);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
   const [progressPercentage, setProgressPercentage] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'metrics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'metrics'>('details');
 
   // Parse summary into structured sections
   const summarySections = useMemo(() => {
@@ -72,7 +72,11 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
       const headerMatch = line.match(/^#{1,3}\s*(.+)$/);
       if (headerMatch) {
         if (currentSection) {
-          sections.push(currentSection as SummarySection);
+          // Only add sections with meaningful content
+          const sectionContent = (currentSection as any).content;
+          if (sectionContent && sectionContent.trim().length > 10) {
+            sections.push(currentSection as SummarySection);
+          }
         }
         
         const title = headerMatch[1].trim();
@@ -83,11 +87,11 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
           icon = <Lightbulb className="w-5 h-5" />;
           color = 'from-blue-500 to-cyan-500';
           priority = 1;
-        } else if (title.toLowerCase().includes('goal') || title.toLowerCase().includes('objective')) {
+        } else if (title.toLowerCase().includes('problem') || title.toLowerCase().includes('solution')) {
           icon = <Target className="w-5 h-5" />;
           color = 'from-green-500 to-emerald-500';
           priority = 2;
-        } else if (title.toLowerCase().includes('user') || title.toLowerCase().includes('audience')) {
+        } else if (title.toLowerCase().includes('user') || title.toLowerCase().includes('audience') || title.toLowerCase().includes('market')) {
           icon = <Users className="w-5 h-5" />;
           color = 'from-purple-500 to-pink-500';
           priority = 3;
@@ -95,24 +99,40 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
           icon = <Zap className="w-5 h-5" />;
           color = 'from-yellow-500 to-orange-500';
           priority = 4;
-        } else if (title.toLowerCase().includes('technical') || title.toLowerCase().includes('requirement')) {
+        } else if (title.toLowerCase().includes('technical') || title.toLowerCase().includes('requirement') || title.toLowerCase().includes('resource')) {
           icon = <Settings className="w-5 h-5" />;
           color = 'from-indigo-500 to-blue-500';
           priority = 5;
-        } else {
+        } else if (title.toLowerCase().includes('progress') || title.toLowerCase().includes('development')) {
           icon = <BarChart3 className="w-5 h-5" />;
-          color = 'from-gray-500 to-gray-600';
+          color = 'from-blue-500 to-purple-500';
           priority = 6;
+        } else if (title.toLowerCase().includes('next') || title.toLowerCase().includes('recommendation')) {
+          icon = <TrendingUp className="w-5 h-5" />;
+          color = 'from-green-500 to-blue-500';
+          priority = 7;
+        } else {
+          icon = <FileText className="w-5 h-5" />;
+          color = 'from-gray-500 to-gray-600';
+          priority = 8;
         }
         
         currentSection = { title, content: '', icon, color, priority };
       } else if (currentSection && line.trim()) {
-        currentSection.content += line + '\n';
+        // Skip placeholder content and ensure meaningful content
+        const cleanLine = line.replace(/🤔|Thinking\.\.\.|\.\.\./g, '').trim();
+        if (cleanLine && cleanLine.length > 5 && !cleanLine.startsWith('*Note:')) {
+          currentSection.content += line + '\n';
+        }
       }
     });
     
     if (currentSection) {
-      sections.push(currentSection as SummarySection);
+      // Only add sections with meaningful content
+      const sectionContent = (currentSection as any).content;
+      if (sectionContent && sectionContent.trim().length > 10) {
+        sections.push(currentSection as SummarySection);
+      }
     }
     
     return sections.sort((a, b) => a.priority - b.priority);
@@ -208,11 +228,26 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full animate-ping" />
               )}
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Idea Summary</h2>
-              <p className="text-sm text-gray-400">AI-powered insights & metrics</p>
-            </div>
+                          <div>
+                <h2 className="text-xl font-bold text-white">💡 Idea Development Summary</h2>
+                <p className="text-sm text-gray-400">
+                  AI-powered structured insights & metrics
+                  {lastUpdateTime && (
+                    <span className="ml-2 text-xs text-gray-500">
+                      • Updated {lastUpdateTime.toLocaleTimeString()}
+                    </span>
+                  )}
+                </p>
+              </div>
           </div>
+          
+          {/* Update Status */}
+          {isUpdatingSummary && (
+            <div className="flex items-center gap-2 text-blue-400">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
+              <span className="text-sm">Updating...</span>
+            </div>
+          )}
           
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
@@ -328,8 +363,13 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
                   <div className="absolute inset-0 bg-gray-900/90 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-400 border-t-transparent mx-auto mb-4"></div>
-                      <p className="text-blue-400 font-medium text-lg">AI is updating your summary...</p>
-                      <p className="text-gray-400 text-sm mt-2">Analyzing conversation for new insights</p>
+                      <p className="text-blue-400 font-medium text-lg">AI is analyzing your conversation...</p>
+                      <p className="text-gray-400 text-sm mt-2">Extracting insights and updating summary</p>
+                      <div className="mt-4 flex items-center justify-center space-x-2">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -464,8 +504,13 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
                     ) : (
                       <div className="text-center py-12">
                         <div className="text-6xl mb-4">📝</div>
-                        <h3 className="text-xl text-gray-400 mb-2">No structured sections found</h3>
-                        <p className="text-gray-500">The AI will organize your idea into sections as you continue the conversation.</p>
+                        <h3 className="text-xl text-gray-400 mb-2">Building your summary...</h3>
+                        <p className="text-gray-500">The AI is analyzing your conversation and will organize it into structured sections.</p>
+                        <div className="mt-4 flex items-center justify-center">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce ml-2" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce ml-2" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -562,3 +607,4 @@ const IdeaSummary: React.FC<IdeaSummaryProps> = ({
 };
 
 export default IdeaSummary;
+

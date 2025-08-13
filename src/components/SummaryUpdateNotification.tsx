@@ -25,7 +25,7 @@ const SummaryUpdateNotification: React.FC<SummaryUpdateNotificationProps> = ({ i
                 <div className="w-1 h-1 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
               </div>
             </div>
-            <p className="text-xs text-blue-100 mt-1">AI is analyzing the conversation...</p>
+            <p className="text-xs text-blue-100 mt-1">AI is creating a structured summary...</p>
           </div>
         </div>
         
